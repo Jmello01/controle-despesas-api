@@ -83,5 +83,60 @@ public class DespesasServiceTest {
         // Assert
         verify(repository, times(1)).deleteById(id);
     }
+    @Test
+    @DisplayName("Deve calcular total do mês atual corretamente")
+    void deveCalcularTotalMesAtualCorretamente() {
+        // Arrange
+        Despesa despesa1 = new Despesa();
+        despesa1.setValor(new BigDecimal("100.00"));
+        despesa1.setData(LocalDate.now());
+
+        Despesa despesa2 = new Despesa();
+        despesa2.setValor(new BigDecimal("200.50"));
+        despesa2.setData(LocalDate.now());
+
+        when(repository.findAll()).thenReturn(java.util.List.of(despesa1, despesa2));
+
+        // Act
+        BigDecimal total = service.calcularTotalMesAtual();
+
+        // Assert
+        assertEquals(new BigDecimal("300.50"), total);
+        verify(repository, times(1)).findAll();
+    }
+
+    @Test
+    @DisplayName("Deve retornar zero quando não há despesas no mês")
+    void deveRetornarZeroQuandoNaoHaDespesasNoMes() {
+        // Arrange
+        when(repository.findAll()).thenReturn(java.util.List.of());
+
+        // Act
+        BigDecimal total = service.calcularTotalMesAtual();
+
+        // Assert
+        assertEquals(BigDecimal.ZERO, total);
+    }
+
+    @Test
+    @DisplayName("Deve ignorar despesas de meses anteriores no cálculo")
+    void deveIgnorarDespesasDeMesesAnteriores() {
+        // Arrange
+        Despesa despesaMesAtual = new Despesa();
+        despesaMesAtual.setValor(new BigDecimal("100.00"));
+        despesaMesAtual.setData(LocalDate.now());
+
+        Despesa despesaMesPassado = new Despesa();
+        despesaMesPassado.setValor(new BigDecimal("200.00"));
+        despesaMesPassado.setData(LocalDate.now().minusMonths(1));
+
+        when(repository.findAll()).thenReturn(java.util.List.of(despesaMesAtual, despesaMesPassado));
+
+        // Act
+        BigDecimal total = service.calcularTotalMesAtual();
+
+        // Assert
+        assertEquals(new BigDecimal("100.00"), total);
+    }
 }
 
