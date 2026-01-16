@@ -32,17 +32,21 @@ public class SwaggerConfig {
                                 - Java 21
                                 - Spring Boot 3.4
                                 - Spring Data JPA
-                                - H2 Database
+                                - PostgreSQL (Produção)
+                                - H2 Database (Desenvolvimento)
                                 - Bean Validation
                                 """)
                         .contact(new Contact()
                                 .name("João Ricardo")
-                                .email("joaomello.tecn@gmail.com")
+                                .email("seu.email@exemplo.com")
                                 .url("https://github.com/Jmello01"))
                         .license(new License()
                                 .name("MIT License")
                                 .url("https://opensource.org/licenses/MIT")))
                 .servers(List.of(
+                        new Server()
+                                .url("https://controle-despesas-api-production.up.railway.app")
+                                .description("Servidor de Produção (Railway)"),
                         new Server()
                                 .url("http://localhost:8080")
                                 .description("Servidor de Desenvolvimento")
