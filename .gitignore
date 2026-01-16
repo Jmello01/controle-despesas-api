@@ -32,3 +32,9 @@ mvnw.cmd
 
 # Application properties with sensitive data
 # application-prod.properties
+
+# Railway
+.railway/
+
+# Environment variables
+.env
