@@ -37,4 +37,8 @@ public class Despesa {
     @Schema(description = "Categoria da despesa", example = "Moradia",
             allowableValues = {"Moradia", "Alimentação", "Transporte", "Saúde", "Lazer", "Educação", "Outros"})
     private String categoria;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "usuario_id")
+    private Usuario usuario;
 }
