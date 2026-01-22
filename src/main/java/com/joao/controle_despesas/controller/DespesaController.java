@@ -3,99 +3,70 @@ package com.joao.controle_despesas.controller;
 import com.joao.controle_despesas.model.Despesa;
 import com.joao.controle_despesas.service.DespesaService;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.util.List;
 
+
 @RestController
 @RequestMapping("/api/despesas")
+@RequiredArgsConstructor
 @Tag(name = "Gestão de Despesas", description = "Endpoints para gerenciar despesas pessoais")
+@SecurityRequirement(name = "bearer-jwt")
 public class DespesaController {
 
-    @Autowired
-    private DespesaService service;
+    private final DespesaService despesaService;
 
-    @Operation(
-            summary = "Cadastrar nova despesa",
-            description = "Cria uma nova despesa no sistema com validações de dados"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(
-                    responseCode = "201",
-                    description = "Despesa cadastrada com sucesso",
-                    content = @Content(schema = @Schema(implementation = Despesa.class))
-            ),
-            @ApiResponse(
-                    responseCode = "400",
-                    description = "Dados inválidos - Verifique as validações"
-            )
-    })
+
     @PostMapping
+    @Operation(summary = "Cadastrar despesa", description = "Cadastra uma nova despesa para o usuário autenticado")
     public ResponseEntity<Despesa> cadastrar(
-            @Parameter(description = "Dados da despesa a ser cadastrada", required = true)
-            @Valid @RequestBody Despesa despesa) {
-        Despesa despesaSalva = service.cadastrar(despesa);
+            @Valid @RequestBody Despesa despesa,
+            @AuthenticationPrincipal UserDetails userDetails
+    ) {
+        String email = userDetails.getUsername();
+        Despesa despesaSalva = despesaService.salvar(despesa, email);
         return ResponseEntity.status(HttpStatus.CREATED).body(despesaSalva);
     }
 
-    @Operation(
-            summary = "Listar todas as despesas",
-            description = "Retorna lista completa de todas as despesas cadastradas"
-    )
-    @ApiResponse(
-            responseCode = "200",
-            description = "Lista retornada com sucesso"
-    )
     @GetMapping
-    public ResponseEntity<List<Despesa>> listarTodas() {
-        List<Despesa> despesas = service.listarTodas();
+    @Operation(summary = "Listar despesas", description = "Lista todas as despesas do usuário autenticado")
+    public ResponseEntity<List<Despesa>> listarTodas(
+            @AuthenticationPrincipal UserDetails userDetails
+    ) {
+        String email = userDetails.getUsername();
+        List<Despesa> despesas = despesaService.listarTodas(email);
         return ResponseEntity.ok(despesas);
     }
 
-    @Operation(
-            summary = "Calcular total do mês atual",
-            description = "Retorna a soma de todas as despesas do mês vigente"
-    )
-    @ApiResponse(
-            responseCode = "200",
-            description = "Total calculado com sucesso"
-    )
+
     @GetMapping("/total")
-    public ResponseEntity<BigDecimal> calcularTotal() {
-        BigDecimal total = service.calcularTotalMesAtual();
+    @Operation(summary = "Calcular total", description = "Calcula o total de despesas do usuário autenticado")
+    public ResponseEntity<BigDecimal> calcularTotal(
+            @AuthenticationPrincipal UserDetails userDetails
+    ) {
+        String email = userDetails.getUsername();
+        BigDecimal total = despesaService.calcularTotal(email);
         return ResponseEntity.ok(total);
     }
 
-    @Operation(
-            summary = "Deletar despesa",
-            description = "Remove uma despesa específica do sistema pelo ID"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(
-                    responseCode = "204",
-                    description = "Despesa deletada com sucesso"
-            ),
-            @ApiResponse(
-                    responseCode = "404",
-                    description = "Despesa não encontrada"
-            )
-    })
     @DeleteMapping("/{id}")
+    @Operation(summary = "Deletar despesa", description = "Deleta uma despesa do usuário autenticado")
     public ResponseEntity<Void> deletar(
-            @Parameter(description = "ID da despesa a ser deletada", required = true, example = "1")
-            @PathVariable Long id) {
-        service.deletar(id);
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails
+    ) {
+        String email = userDetails.getUsername();
+        despesaService.deletar(id, email);
         return ResponseEntity.noContent().build();
     }
 }

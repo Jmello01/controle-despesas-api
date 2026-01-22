@@ -1,56 +1,72 @@
 package com.joao.controle_despesas.service;
 
 import com.joao.controle_despesas.model.Despesa;
+import com.joao.controle_despesas.model.Usuario;
 import com.joao.controle_despesas.repository.DespesaRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.joao.controle_despesas.repository.UsuarioRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.util.List;
 
-
 @Service
+@RequiredArgsConstructor
 public class DespesaService {
 
-    @Autowired
-    private DespesaRepository repository;
+    private final DespesaRepository despesaRepository;
+    private final UsuarioRepository usuarioRepository;
 
-    // Método para cadastrar despesa
-    public Despesa cadastrar(Despesa despesa) {
-        return repository.save(despesa);
+    public Despesa salvar(Despesa despesa, String emailUsuario) {
+        // Busca o usuário pelo email
+        Usuario usuario = usuarioRepository.findByEmail(emailUsuario)
+                .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+
+        // Vincula a despesa ao usuário
+        despesa.setUsuario(usuario);
+
+        // Salva no banco
+        return despesaRepository.save(despesa);
     }
 
-    // Método para listar todas
-    public List<Despesa> listarTodas() {
-        return repository.findAll();
+    public List<Despesa> listarTodas(String emailUsuario) {
+        // Busca o usuário
+        Usuario usuario = usuarioRepository.findByEmail(emailUsuario)
+                .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+
+        // Busca apenas despesas deste usuário
+        return despesaRepository.findByUsuarioId(usuario.getId());
     }
 
-    // Método para deletar despesa
-    public void deletar(Long id) {
-        repository.deleteById(id);
+    public BigDecimal calcularTotal(String emailUsuario) {
+        // Busca o usuário
+        Usuario usuario = usuarioRepository.findByEmail(emailUsuario)
+                .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+
+        // Busca despesas do usuário
+        List<Despesa> despesas = despesaRepository.findByUsuarioId(usuario.getId());
+
+        // Calcula total
+        return despesas.stream()
+                .map(Despesa::getValor)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    // Método para calcular total do Mês atual
-    public BigDecimal calcularTotalMesAtual() {
-        List<Despesa> todasDespesas = repository.findAll();
+    public void deletar(Long id, String emailUsuario) {
+        // Busca o usuário
+        Usuario usuario = usuarioRepository.findByEmail(emailUsuario)
+                .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
 
-        // Pegar Mês e ano atual
-        LocalDate hoje = LocalDate.now();
-        int mesAtual = hoje.getMonthValue();
-        int anoAtual = hoje.getYear();
+        // Busca a despesa
+        Despesa despesa = despesaRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Despesa não encontrada"));
 
-        // Filtra despesas do mês atual e somar
-        BigDecimal total = BigDecimal.ZERO;
-
-        for (Despesa despesa : todasDespesas) {
-            if (despesa.getData() != null) {
-                if (despesa.getData().getMonthValue() == mesAtual &&
-                        despesa.getData().getYear() == anoAtual) {
-                    total = total.add(despesa.getValor());
-                }
-            }
+        // VERIFICA SE A DESPESA PERTENCE AO USUÁRIO
+        if (!despesa.getUsuario().getId().equals(usuario.getId())) {
+            throw new RuntimeException("Você não tem permissão para deletar esta despesa");
         }
 
-        return total;
+        // Deleta
+        despesaRepository.deleteById(id);
     }
 }
